@@ -21,7 +21,6 @@ set(${proj}_DEPENDS
    xeus
    xeus-python
    pybind11
-   python-packages
    )
 
 ExternalProject_Include_Dependencies(${proj}
