@@ -1,7 +1,13 @@
 set(proj python-packages)
 
 # Set dependency list
-set(${proj}_DEPENDENCIES "")
+set(${proj}_DEPENDENCIES
+  python
+  python-pip
+  python-setuptools
+  python-numpy
+  python-wheel
+  )
 
 # Include dependent projects if any
 ExternalProject_Include_Dependencies(${proj} PROJECT_VAR proj DEPENDS_VAR ${proj}_DEPENDENCIES)
