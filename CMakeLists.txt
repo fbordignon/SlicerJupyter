@@ -39,12 +39,6 @@ add_subdirectory(JupyterKernel)
 add_subdirectory(JupyterNotebooks)
 
 #-----------------------------------------------------------------------------
-install(CODE "message(\"Installing python packages.\")")
-install(DIRECTORY "${python_packages_DIR}/"
-        DESTINATION ${Slicer_INSTALL_ROOT}${Slicer_BUNDLE_EXTENSIONS_LOCATION}
-        COMPONENT RuntimeLibraries)
-
-#-----------------------------------------------------------------------------
 set(EXTENSION_CPACK_INSTALL_CMAKE_PROJECTS)
 list(APPEND EXTENSION_CPACK_INSTALL_CMAKE_PROJECTS "${xeus_DIR};xeus;ALL;/") # xeus has no runtime install component
 list(APPEND EXTENSION_CPACK_INSTALL_CMAKE_PROJECTS "${xeus-python_DIR};xeus-python;ALL;/")
