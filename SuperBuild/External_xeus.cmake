@@ -2,7 +2,7 @@
 set(proj xeus)
 
 # Set dependency list
-set(${proj}_DEPENDS nlohmann_json xtl ZeroMQ cppzmq)
+set(${proj}_DEPENDS nlohmann_json xtl ZeroMQ cppzmq OpenSSL)
 
 # Include dependent projects if any
 ExternalProject_Include_Dependencies(${proj} PROJECT_VAR proj)
