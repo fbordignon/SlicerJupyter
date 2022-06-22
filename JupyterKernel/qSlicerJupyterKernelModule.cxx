@@ -271,13 +271,24 @@ void qSlicerJupyterKernelModule::startKernel(const QString& connectionFile)
     using history_manager_ptr = std::unique_ptr<xeus::xhistory_manager>;
     history_manager_ptr hist = xeus::make_in_memory_history_manager();
 
+    auto context = xeus::make_context<zmq::context_t>();
+
+    nl::json debugger_config;
+    debugger_config["python"] = QStandardPaths::findExecutable("PythonSlicer").toStdString();
+
     d->Kernel = new xeus::xkernel(d->Config,
                                   "slicer",
+                                  std::move(context),
                                   std::move(interpreter),
-                                  std::move(hist),
-                                  nullptr,
                                   make_xSlicerServer,
-                                  xpyt::make_python_debugger);
+                                  std::move(hist),
+                                  nullptr // console logger
+      
+                                  // debugger is disabled for now
+                                  // (see https://github.com/Slicer/SlicerJupyter/issues/69)
+                                  // , xpyt::make_python_debugger, debugger_config
+
+                                  );
 
     d->Kernel->start();
 
@@ -351,7 +362,9 @@ bool qSlicerJupyterKernelModule::slicerKernelSpecInstallCommandArgs(QString& exe
   }
 
   executable = "jupyter-kernelspec";
-  args = QStringList() << "install" << this->resourceFolderPath() << "--replace" << "--user";
+  args = QStringList() << "install"
+    << (QString("\"") + this->resourceFolderPath() + QString("\""))
+    << "--replace" << "--user";
 
   return true;
 }
@@ -366,61 +379,23 @@ bool qSlicerJupyterKernelModule::installInternalJupyterServer()
   context.evalScript(QString("success=False; import JupyterNotebooks; server=JupyterNotebooks.SlicerJupyterServerHelper(); success=server.installRequiredPackages()"));
   bool success = context.getVariable("success").toBool();
   return success;
-  /*
-
-  QString kernelspecExecutable;
-  QStringList args;
-  if (!this->slicerKernelSpecInstallCommandArgs(kernelspecExecutable, args))
-  {
-    qWarning() << Q_FUNC_INFO << " failed: slicerKernelSpecInstallCommandArgs failed to determine install command";
-    return false;
-  }
-
-  QString kernelspecExecutablePath = pythonScriptsFolder + "/" + kernelspecExecutable;
-
-  qDebug() << Q_FUNC_INFO << ": launching " << kernelspecExecutablePath << " " << args.join(" ");
-
-  QProcess kernelSpecProcess;
-  qSlicerApplication* app = qSlicerApplication::application();
-  kernelSpecProcess.setProcessEnvironment(app->startupEnvironment());
-  kernelSpecProcess.setProgram(kernelspecExecutablePath);
-  kernelSpecProcess.setArguments(args);
-  kernelSpecProcess.start();
-  bool finished = kernelSpecProcess.waitForFinished();
-  QString output = QString(kernelSpecProcess.readAllStandardOutput());
-  QString errorOutput = QString(kernelSpecProcess.readAllStandardError());
-  if (!output.isEmpty())
-  {
-    qDebug() << "Kernelspec install output: " << output;
-  }
-  if (!errorOutput.isEmpty())
-  {
-    qWarning() << "Kernelspec install error output: " << errorOutput;
-  }
-  if (!finished)
-  {
-    qWarning() << Q_FUNC_INFO << " failed: error launching process " << kernelspecExecutablePath
-      << " (code = " << kernelSpecProcess.error() << ")";
-    return false;
-  }
-  if (kernelSpecProcess.exitCode() != 0)
-  {
-    qWarning() << Q_FUNC_INFO << " failed: process " << kernelspecExecutablePath
-      << " returned with exit code " << kernelSpecProcess.exitCode();
-    return false;
-  }
-  return true;
-  */
 }
 
 //-----------------------------------------------------------------------------
-bool qSlicerJupyterKernelModule::startInternalJupyterServer(QString notebookDirectory, bool detached/*=false*/)
+bool qSlicerJupyterKernelModule::startInternalJupyterServer(QString notebookDirectory, bool detached/*=false*/, bool classic/*=false*/)
 {
   Q_D(qSlicerJupyterKernelModule);
   QString pythonExecutable = QStandardPaths::findExecutable("PythonSlicer");
   d->InternalJupyterServer.setProgram(pythonExecutable);
   QStringList args;
-  args << "-m" << "notebook";
+  if (classic)
+  {
+    args << "-m" << "notebook";
+  }
+  else
+  {
+    args << "-m" << "jupyter" << "lab";
+  }
   args << "--notebook-dir" << notebookDirectory;
   d->InternalJupyterServer.setArguments(args);
   bool success = false;
